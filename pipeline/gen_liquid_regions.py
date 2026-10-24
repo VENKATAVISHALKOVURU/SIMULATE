@@ -351,16 +351,29 @@ def _publish_complete_tree(stage_root: Path, generated_dir: Path) -> None:
 	manifest_backed_up = False
 	material_published = False
 	manifest_published = False
+
+	import time
+
+	def _replace_atomic(src: Path, dst: Path, retries: int = 15, delay: float = 0.1) -> None:
+		for attempt in range(retries):
+			try:
+				os.replace(src, dst)
+				return
+			except PermissionError:
+				if attempt == retries - 1:
+					raise
+				time.sleep(delay)
+
 	try:
 		if target_material.exists():
-			os.replace(target_material, previous_material)
+			_replace_atomic(target_material, previous_material)
 			material_backed_up = True
 		if target_manifest.exists():
-			os.replace(target_manifest, previous_manifest)
+			_replace_atomic(target_manifest, previous_manifest)
 			manifest_backed_up = True
-		os.replace(staged_material, target_material)
+		_replace_atomic(staged_material, target_material)
 		material_published = True
-		os.replace(stage_root / "liquid_regions.json", target_manifest)
+		_replace_atomic(stage_root / "liquid_regions.json", target_manifest)
 		manifest_published = True
 	except OSError:
 		# Remove only outputs known to have been published by this attempt.  A
@@ -370,9 +383,9 @@ def _publish_complete_tree(stage_root: Path, generated_dir: Path) -> None:
 		if manifest_published and target_manifest.exists():
 			target_manifest.unlink()
 		if material_backed_up and previous_material.exists():
-			os.replace(previous_material, target_material)
+			_replace_atomic(previous_material, target_material)
 		if manifest_backed_up and previous_manifest.exists():
-			os.replace(previous_manifest, target_manifest)
+			_replace_atomic(previous_manifest, target_manifest)
 		raise
 
 

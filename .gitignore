@@ -1,5 +1,7 @@
 # === LOCAL REPOSITORY RULES === [ADD CUSTOM IGNORES HERE]
 # Propagation preserves this section.
+.env
+backend/.env
 
 # ============================================================
 # Build outputs (regenerated every build)

@@ -46,6 +46,21 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+# Resolve Python command: prefer PYTHON env var, probe working interpreter
+if [ -z "${PYTHON:-}" ]; then
+	if python3 --version >/dev/null 2>&1; then
+		PYTHON="python3"
+	elif python --version >/dev/null 2>&1; then
+		PYTHON="python"
+	elif py -3 --version >/dev/null 2>&1; then
+		PYTHON="py -3"
+	else
+		PYTHON="python3"
+	fi
+fi
+export PYTHON
+export PYTHONUTF8=1
+
 # Require dependencies, but never install them here: this script must stay
 # clean for CI / GitHub Pages, where the workflow installs deps (npm ci) before
 # building. Local dev convenience (auto-install) lives in run_web_server.sh.
@@ -136,7 +151,7 @@ cp assets/fonts/*.woff2 dist/assets/fonts/
 #     (tools/scene_to_png.mjs) and GitHub Pages serve dist/, so SVGs must live
 #     under dist/assets/svg/<category>/. Ordinary art publishes from assets/;
 #     material-declared art can publish only from generated/material_svg/.
-python3 -m pipeline.gen_svg_manifest --publish-to dist/assets/svg
+"$PYTHON" -m pipeline.gen_svg_manifest --publish-to dist/assets/svg
 
 # The injection seam consumes the compiler-owned opaque handle manifest at a
 # stable relative runtime URL. It is generated in the same all-or-nothing pass
@@ -146,7 +161,7 @@ cp generated/liquid_regions.json dist/assets/liquid_regions.json
 # 7. Generate dist/<protocol_name>.html for every PROTOCOLS_INDEX entry.
 #    list_protocols.py 'emit' parses PROTOCOLS_INDEX from generated/protocols.ts
 #    and writes one dist/<name>.html per entry, substituting {{PROTOCOL_NAME}}.
-python3 pipeline/list_protocols.py emit \
+"$PYTHON" pipeline/list_protocols.py emit \
 	--template src/protocol_host_template.html \
 	--out-dir dist
 

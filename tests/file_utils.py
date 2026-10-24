@@ -1,5 +1,6 @@
 # Standard Library
 import os
+import sys
 import ast
 import fnmatch
 import pathlib
@@ -456,11 +457,11 @@ def run_fixer_script(script_name: str, target: str) -> tuple[int, str]:
 		)
 	# Run the fixer in the repo root so its own path resolution is consistent.
 	# Build the command first so the try body stays a single line per style.
-	command = ["python3", script_path, "-i", target]
+	command = [sys.executable, script_path, "-i", target]
 	try:
 		result = subprocess.run(command, capture_output=True, text=True, cwd=root)
 	except FileNotFoundError as exc:
-		raise RuntimeError("python3 interpreter not found; test environment is broken.") from exc
+		raise RuntimeError("Python interpreter not found; test environment is broken.") from exc
 	# Return the raw outcome; callers interpret the exit code.
 	return result.returncode, result.stderr
 

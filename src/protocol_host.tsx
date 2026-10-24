@@ -798,6 +798,9 @@ function mount(): void {
       () => (
         <ProtocolHud
           snapshot={snapshot_signal}
+          protocol_name={protocol_name}
+          learning_objectives={active_config.learning?.objectives}
+          learning_goals={active_config.learning?.goals}
           steps={protocol_steps}
           entry_step={active_config.entry_step}
           display_title={display_title}

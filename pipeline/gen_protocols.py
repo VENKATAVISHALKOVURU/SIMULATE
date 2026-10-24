@@ -557,7 +557,7 @@ def emit_protocols_index_slim_ts(repo_root: str, protocols: dict) -> None:
 
 	ts_lines.append("] as const;")
 
-	with open(output_path, "w") as f:
+	with open(output_path, "w", encoding="utf-8") as f:
 		f.write("\n".join(ts_lines) + "\n")
 
 	print(f"Generated: {output_path}")
@@ -726,7 +726,7 @@ def emit_protocols_ts(
 	ts_lines.append("] as const;")
 
 	# Write to file
-	with open(output_path, "w") as f:
+	with open(output_path, "w", encoding="utf-8") as f:
 		f.write("\n".join(ts_lines) + "\n")
 
 	print(f"Generated: {output_path}")
@@ -881,7 +881,7 @@ def emit_protocol_materials_ts(
 
 	ts_lines.append("} as const;")
 
-	with open(output_path, "w") as f:
+	with open(output_path, "w", encoding="utf-8") as f:
 		f.write("\n".join(ts_lines) + "\n")
 
 	print(f"Generated: {output_path}")

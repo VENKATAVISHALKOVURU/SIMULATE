@@ -2,6 +2,7 @@
 import os
 import stat
 import pathlib
+import subprocess
 
 # PIP3 modules
 import pytest
@@ -45,13 +46,37 @@ def read_shebang(path: str) -> str:
 	if line.startswith(b"#!["):
 		return ""
 	try:
-		decoded = line.decode("utf-8").rstrip("\n")
+		decoded = line.decode("utf-8").rstrip("\r\n")
 	except UnicodeDecodeError:
-		decoded = line.decode("utf-8", errors="replace").rstrip("\n")
+		decoded = line.decode("utf-8", errors="replace").rstrip("\r\n")
 	# WeBWorK loads this exact .conf heading as configuration data.
 	if decoded == "#!perl" and path.endswith(".conf"):
 		return ""
 	return decoded
+
+
+_GIT_EXEC_MODES: dict[str, bool] | None = None
+
+
+def _get_git_exec_modes() -> dict[str, bool]:
+	global _GIT_EXEC_MODES
+	if _GIT_EXEC_MODES is not None:
+		return _GIT_EXEC_MODES
+	_GIT_EXEC_MODES = {}
+	try:
+		out = subprocess.check_output(
+			["git", "ls-files", "--stage"],
+			cwd=REPO_ROOT,
+			text=True,
+			stderr=subprocess.DEVNULL,
+		)
+		for line in out.splitlines():
+			parts = line.split(maxsplit=3)
+			if len(parts) == 4:
+				_GIT_EXEC_MODES[parts[3].strip()] = parts[0].startswith("1007")
+	except Exception:
+		pass
+	return _GIT_EXEC_MODES
 
 
 #============================================
@@ -65,6 +90,11 @@ def is_executable(path: str) -> bool:
 	Returns:
 		bool: True if executable for user/group/other.
 	"""
+	if os.name == "nt":
+		rel = file_utils.rel_to_root(path).replace("\\", "/")
+		modes = _get_git_exec_modes()
+		if rel in modes:
+			return modes[rel]
 	try:
 		mode = os.stat(path).st_mode
 	except OSError:

@@ -23,22 +23,39 @@ cd "$(git rev-parse --show-toplevel)"
 
 # Make repo-root packages (pipeline.*, validation.*) importable by the
 # generators regardless of whether the caller sourced source_me.sh
-# (run_playwright_tests.sh does not). Mirrors source_me.sh's PYTHONPATH export.
-export PYTHONPATH="$(git rev-parse --show-toplevel)${PYTHONPATH:+:$PYTHONPATH}"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if command -v cygpath >/dev/null 2>&1; then
+	export PYTHONPATH="$(cygpath -w "$REPO_ROOT")${PYTHONPATH:+;$PYTHONPATH}"
+else
+	export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+# Resolve Python command: inherit PYTHON env var if set, otherwise probe
+if [ -z "${PYTHON:-}" ]; then
+	if python3 --version >/dev/null 2>&1; then
+		PYTHON="python3"
+	elif python --version >/dev/null 2>&1; then
+		PYTHON="python"
+	elif py -3 --version >/dev/null 2>&1; then
+		PYTHON="py -3"
+	else
+		PYTHON="python3"
+	fi
+fi
 
 # Fail before deleting or generating artifacts if retired object-level liquid
 # overlay behavior, invalid material art, or an ordinary fill binding returns.
-python3 -m validation.svg.material_anti_return_lint
+"$PYTHON" -m validation.svg.material_anti_return_lint
 
 # Wipe and recreate the artifact tree so no stale outputs survive.
 rm -rf generated
 mkdir -p generated
 
 # Run the generators in canonical order.
-python3 pipeline/gen_object_library.py
-python3 pipeline/gen_liquid_regions.py
-python3 pipeline/gen_svg_manifest.py
-python3 pipeline/gen_scene_index.py
-python3 pipeline/gen_protocols.py
+"$PYTHON" pipeline/gen_object_library.py
+"$PYTHON" pipeline/gen_liquid_regions.py
+"$PYTHON" pipeline/gen_svg_manifest.py
+"$PYTHON" pipeline/gen_scene_index.py
+"$PYTHON" pipeline/gen_protocols.py
 
 echo "Regenerated generated/ (object_library, material_svg, liquid_regions, svg_manifest, scenes, protocols)."

@@ -85,6 +85,35 @@ const CI = isCi();
 // Config
 //============================================
 
+function resolvePython(): string {
+  const custom = readEnv("PYTHON") || readEnv("PYTHON_BIN");
+  if (custom && custom.trim() !== "") {
+    return custom.trim();
+  }
+  const proc = (globalThis as { process?: { platform?: string } }).process;
+  return proc?.platform === "win32" ? "python" : "python3";
+}
+
+function resolveBash(): string {
+  const custom = readEnv("BASH") || readEnv("BASH_BIN");
+  if (custom && custom.trim() !== "") {
+    return custom.trim();
+  }
+  const proc = (globalThis as { process?: { platform?: string; getBuiltinModule?: (name: string) => { existsSync: (path: string) => boolean } } }).process;
+  if (proc?.platform === "win32") {
+    try {
+      const fs = proc.getBuiltinModule ? proc.getBuiltinModule("node:fs") : null;
+      const standardGitBash = "C:\\Program Files\\Git\\bin\\bash.exe";
+      if (fs && fs.existsSync(standardGitBash)) {
+        return `"${standardGitBash}"`;
+      }
+    } catch {
+      // fallback to bare command
+    }
+  }
+  return "bash";
+}
+
 export default defineConfig({
   // Browser specs live alongside the Playwright helpers.
   testDir: "tests/playwright",
@@ -117,7 +146,7 @@ export default defineConfig({
   // every run keeps the served bytes tied to the current build. CI already ran
   // this way; local now matches.
   webServer: {
-    command: `bash build_github_pages.sh && python3 -m http.server ${PORT} --bind 127.0.0.1 --directory dist`,
+    command: `${resolveBash()} build_github_pages.sh && ${resolvePython()} -m http.server ${PORT} --bind 127.0.0.1 --directory dist`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 180_000,

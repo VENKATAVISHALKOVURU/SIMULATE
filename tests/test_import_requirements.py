@@ -134,8 +134,8 @@ def collect_repo_module_names(paths: list[str]) -> set[str]:
 	"""
 	module_names = set()
 	for path in paths:
-		rel_path = file_utils.rel_to_root(path)
-		for part in rel_path.split(os.sep)[:-1]:
+		rel_path = file_utils.rel_to_root(path).replace("\\", "/")
+		for part in rel_path.split("/")[:-1]:
 			if part:
 				module_names.add(part)
 		base_name = os.path.basename(path)

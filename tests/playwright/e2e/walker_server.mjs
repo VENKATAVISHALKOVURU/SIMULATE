@@ -4,11 +4,35 @@
 // browser navigates. A reachable URL alone is not proof of ownership: another
 // local server might already answer there.
 
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const STARTUP_TIMEOUT_MS = 5000;
 const OWNED_SERVER_SCRIPT = fileURLToPath(new URL("./owned_static_server.py", import.meta.url));
+
+// Resolve an executable python command across platforms (honors PYTHON and PYTHON_BIN env vars).
+export function resolvePythonCommand() {
+  if (process.env.PYTHON !== undefined && process.env.PYTHON !== "") {
+    return process.env.PYTHON;
+  }
+  if (process.env.PYTHON_BIN !== undefined && process.env.PYTHON_BIN !== "") {
+    return process.env.PYTHON_BIN;
+  }
+  const candidates = process.platform === "win32"
+    ? ["python", "py", "python3"]
+    : ["python3", "python"];
+  for (const cmd of candidates) {
+    try {
+      const res = spawnSync(cmd, ["-c", "import sys; sys.exit(0)"], { stdio: "ignore" });
+      if (res.status === 0) {
+        return cmd;
+      }
+    } catch {
+      // Continue to next candidate
+    }
+  }
+  return process.platform === "win32" ? "python" : "python3";
+}
 
 // Use the OS-assigned ephemeral port in the normal self-serve case. An
 // explicitly supplied --port or PORT value remains an intentional override.
@@ -98,8 +122,9 @@ export async function startOwnedStaticServer({
   cwd,
   timeoutMs = STARTUP_TIMEOUT_MS,
 }) {
+  const pythonCmd = resolvePythonCommand();
   const child = spawn(
-    "python3",
+    pythonCmd,
     ["-u", OWNED_SERVER_SCRIPT, "--port", String(port), "--directory", directory],
     {
       stdio: ["ignore", "pipe", "pipe"],

@@ -27,6 +27,7 @@ docs/archive/scene_runtime_spine_plan.md
 docs/archive/tools_split_and_consolidate.md
 docs/archive/unified_interaction_vocabulary_design.md
 docs/archive/unified_interaction_vocabulary_plan.md
+docs/figures/equipment_kit/review.html
 docs/specs/OBJECT_YAML_FORMAT.md
 docs/specs/PROTOCOL_VOCABULARY.md
 src/scene_runtime/layout/layout_labels.ts

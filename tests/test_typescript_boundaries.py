@@ -133,8 +133,9 @@ def _check_import_violation(import_path: str) -> str | None:
 	Returns:
 		Violation reason string if violated, None if OK.
 	"""
+	normalized_import = import_path.replace("\\", "/")
 	# Rule 1: Reject solid-js and solid-js subpaths
-	if _is_solid_import(import_path):
+	if _is_solid_import(normalized_import):
 		return f"forbidden solid-js import: {import_path}"
 
 	# Rule 2: Reject relative/absolute paths pointing to shell/ or launcher/.
@@ -142,13 +143,13 @@ def _check_import_violation(import_path: str) -> str | None:
 	# protocol runtime imports it deliberately. Type-only imports stay
 	# free of any runtime dependency.
 	is_seam_types = (
-		"shell/adapter/types" in import_path
-		or import_path.endswith("/shell/adapter/types")
+		"shell/adapter/types" in normalized_import
+		or normalized_import.endswith("/shell/adapter/types")
 	)
 	if not is_seam_types:
-		if "/shell/" in import_path or import_path.endswith("/shell"):
+		if "/shell/" in normalized_import or normalized_import.endswith("/shell"):
 			return f"forbidden shell import: {import_path}"
-	if "/launcher/" in import_path or import_path.endswith("/launcher"):
+	if "/launcher/" in normalized_import or normalized_import.endswith("/launcher"):
 		return f"forbidden launcher import: {import_path}"
 
 	return None

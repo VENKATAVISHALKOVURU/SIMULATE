@@ -1,3 +1,5 @@
+// src/launcher/protocol_launcher.tsx
+//
 // Launcher component: gives students a clear choice between guided workflows
 // and focused technique practice. It reads the slim protocol index
 // and keeps every protocol as one ordinary link so normal browser navigation
@@ -5,21 +7,9 @@
 //
 // Tier 1: "Guided workflows" -- sequence_runner entries, prominent cards.
 // Tier 2: "Mini-protocols" -- mini_protocol entries grouped by cluster.
-//
-// Pure presentation. Native <details> elements provide optional cluster
-// expansion without removing any entry from the DOM. The display_title is
-// provided by the slim index (authoritative source); the cluster label is
-// derived from the snake_case cluster key with known acronyms preserved
-// (SDS-PAGE, MTT, PBS, DMSO, HEPES).
-//
-// Color hooks: each cluster section carries data-cluster=<key>; CSS owns
-// the accent color per cluster. Sequence runner cards carry
-// data-protocol-type="sequence_runner" for distinct treatment.
-//
-// Props: { index: ReadonlyArray<ProtocolIndexSlimEntry> }
-// Returns: JSXElement (Solid.js component)
+// Tier 3: "Physics simulation roadmap" -- honest upcoming modules.
 
-import { For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import type { ProtocolIndexSlimEntry } from "../shell/adapter/types.js";
 import type { JSXElement } from "solid-js";
 
@@ -122,6 +112,12 @@ function renderEntry(entry: ProtocolIndexSlimEntry): JSXElement {
       href={href}
     >
       <div class="protocol-card-header">
+        <div class="protocol-card-badge-row">
+          <span class="sci-status-pill sci-status-available">Available</span>
+          <span class="protocol-card-steps" data-launcher-step-count>
+            {step_count} steps
+          </span>
+        </div>
         <span class="protocol-card-title" data-launcher-link-name>
           {display_title}
         </span>
@@ -134,11 +130,6 @@ function renderEntry(entry: ProtocolIndexSlimEntry): JSXElement {
           {learning_goal_hook}
         </p>
       </Show>
-      <div class="protocol-card-meta">
-        <span class="protocol-card-steps" data-launcher-step-count>
-          {step_count} steps
-        </span>
-      </div>
       <span class="protocol-card-cta" data-launcher-cta>
         {callToAction(protocol_type)}
       </span>
@@ -171,7 +162,9 @@ function renderCluster(group: ClusterGroup): JSXElement {
 }
 
 export function Launcher(props: LauncherProps): JSXElement {
-  // Partition into sequence runners (top) and mini-protocols (bottom).
+  const [query, set_query] = createSignal("");
+
+  // Partition into sequence runners and mini-protocols
   const runners: ProtocolIndexSlimEntry[] = [];
   const minis: ProtocolIndexSlimEntry[] = [];
   for (const entry of props.index) {
@@ -181,18 +174,76 @@ export function Launcher(props: LauncherProps): JSXElement {
       minis.push(entry);
     }
   }
-  const runners_sorted = runners
-    .slice()
-    .sort((a, b) => a.protocol_name.localeCompare(b.protocol_name));
+
+  const filtered_runners = (): ReadonlyArray<ProtocolIndexSlimEntry> => {
+    const q = query().trim().toLowerCase();
+    if (!q) {
+      return runners.slice().sort((a, b) => a.protocol_name.localeCompare(b.protocol_name));
+    }
+    return runners
+      .filter((e) => e.display_title.toLowerCase().includes(q) || (e.learning_goal_hook ?? "").toLowerCase().includes(q))
+      .sort((a, b) => a.protocol_name.localeCompare(b.protocol_name));
+  };
+
+  const filtered_minis = (): ReadonlyArray<ClusterGroup> => {
+    const q = query().trim().toLowerCase();
+    if (!q) {
+      return groupByCluster(minis);
+    }
+    const matching = minis.filter(
+      (e) =>
+        e.display_title.toLowerCase().includes(q) ||
+        e.cluster.toLowerCase().includes(q) ||
+        (e.learning_goal_hook ?? "").toLowerCase().includes(q),
+    );
+    return groupByCluster(matching);
+  };
+
+  const runners_sorted = runners.slice().sort((a, b) => a.protocol_name.localeCompare(b.protocol_name));
   const mini_groups = groupByCluster(minis);
 
   return (
     <div class="launcher-root" data-launcher-root>
       <header class="launcher-header">
+        <div class="launcher-badge-container">
+          <span class="sci-hero-badge">Professional Virtual Laboratory</span>
+        </div>
         <h1 class="launcher-title" data-launcher-title>
           Choose your lab experience
         </h1>
         <p class="launcher-subtitle">Choose a guided workflow or focused technique practice.</p>
+
+        <div class="launcher-search-toolbar">
+          <div class="launcher-search-box">
+            <span class="launcher-search-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16" y2="16" />
+              </svg>
+            </span>
+            <input
+              type="search"
+              class="launcher-search-input"
+              data-launcher-search
+              placeholder="Search experiments by title or technique..."
+              value={query()}
+              onInput={(e) => set_query(e.currentTarget.value)}
+              aria-label="Search laboratory experiments"
+            />
+            <Show when={query().length > 0}>
+              <button
+                type="button"
+                class="launcher-search-clear"
+                data-launcher-search-clear
+                onClick={() => set_query("")}
+                aria-label="Clear search"
+              >
+                x
+              </button>
+            </Show>
+          </div>
+        </div>
+
         <nav class="launcher-path-nav" aria-label="Choose a protocol path">
           <Show when={runners_sorted.length > 0}>
             <a href="#guided-workflows">Browse guided workflows</a>
@@ -200,19 +251,22 @@ export function Launcher(props: LauncherProps): JSXElement {
           <Show when={mini_groups.length > 0}>
             <a href="#focused-technique-practice">Practice a focused technique</a>
           </Show>
+          <a href="#physics-roadmap">Explore upcoming physics modules</a>
         </nav>
       </header>
+
       <main class="launcher-main">
         <Show when={runners_sorted.length === 0 && mini_groups.length === 0}>
           <div class="launcher-empty-state" data-launcher-empty>
             <p class="launcher-empty-heading">No protocols available</p>
             <p class="launcher-empty-body">
               No protocol files were found in the index. If you are a course author, add
-              mini-protocol or sequence-runner YAML files under content/ and rebuild the protocol
+              mini-protocol or sequence-runner YAML files under content and rebuild the protocol
               index. If you are a student, contact your instructor.
             </p>
           </div>
         </Show>
+
         <Show when={runners_sorted.length > 0}>
           <section
             id="guided-workflows"
@@ -224,10 +278,11 @@ export function Launcher(props: LauncherProps): JSXElement {
               <p class="tier-description">Follow the authored steps in each workflow.</p>
             </div>
             <div class="protocol-card-grid protocol-card-grid-runners" data-launcher-list="runners">
-              <For each={runners_sorted}>{renderEntry}</For>
+              <For each={filtered_runners()}>{renderEntry}</For>
             </div>
           </section>
         </Show>
+
         <Show when={mini_groups.length > 0}>
           <section
             id="focused-technique-practice"
@@ -240,9 +295,55 @@ export function Launcher(props: LauncherProps): JSXElement {
                 Practice one laboratory technique at a time, grouped by topic.
               </p>
             </div>
-            <For each={mini_groups}>{renderCluster}</For>
+            <For each={filtered_minis()}>{renderCluster}</For>
           </section>
         </Show>
+
+        {/* Honest Physics Roadmap Section */}
+        <section id="physics-roadmap" class="launcher-tier launcher-tier-roadmap" data-roadmap-tier="physics">
+          <div class="tier-heading-group">
+            <div class="sci-roadmap-badge-row">
+              <span class="sci-status-pill sci-status-roadmap">Architecture Roadmap</span>
+              <span class="sci-roadmap-note">Coexists with biology contracts without fake simulation</span>
+            </div>
+            <h2 class="tier-heading">Upcoming physics experiments</h2>
+            <p class="tier-description">
+              In-design simulations governed by continuous differential circuit equations.
+            </p>
+          </div>
+
+          <div class="sci-roadmap-grid">
+            <article class="sci-roadmap-card">
+              <div class="sci-card-header">
+                <span class="sci-status-pill sci-status-planned">Coming soon</span>
+                <span class="sci-card-domain">Direct Current Circuits</span>
+              </div>
+              <h3 class="sci-card-title">Ohm's Law and Resistive Networks</h3>
+              <p class="sci-card-desc">
+                Interactive DC power supply, resistor decade box, and digital multimeter for empirical
+                verification of voltage, current, and power dissipation relationships.
+              </p>
+              <div class="sci-card-eq">
+                <code>V = I * R</code> &bull; <code>P = V * I</code>
+              </div>
+            </article>
+
+            <article class="sci-roadmap-card">
+              <div class="sci-card-header">
+                <span class="sci-status-pill sci-status-planned">Coming soon</span>
+                <span class="sci-card-domain">Transient Dynamics</span>
+              </div>
+              <h3 class="sci-card-title">Capacitive Time Constants and RC Networks</h3>
+              <p class="sci-card-desc">
+                Step-voltage charging and discharging analysis with oscilloscope voltage sweep curves
+                and empirical time-constant measurements.
+              </p>
+              <div class="sci-card-eq">
+                <code>&tau; = R * C</code> &bull; <code>V(t) = V&#x2080;(1 - e^&#40;-t/&tau;&#41;)</code>
+              </div>
+            </article>
+          </div>
+        </section>
       </main>
     </div>
   );

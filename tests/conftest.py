@@ -16,6 +16,21 @@ _REPO_ROOT = file_utils.get_repo_root()
 if _REPO_ROOT not in sys.path:
 	sys.path.insert(0, _REPO_ROOT)
 
+# Ensure python's scripts directories (standard and user-site) are in PATH so tools
+# like pyflakes and bandit installed in the current environment are discoverable by shutil.which.
+import os
+import sysconfig
+_user_scheme = f"{os.name}_user"
+_scripts_dirs = [
+	sysconfig.get_path("scripts"),
+	sysconfig.get_path("scripts", _user_scheme) if _user_scheme in sysconfig.get_scheme_names() else None,
+	os.path.join(sys.prefix, "Scripts"),
+]
+for _sdir in _scripts_dirs:
+	if _sdir and os.path.isdir(_sdir) and _sdir not in os.environ.get("PATH", ""):
+		os.environ["PATH"] = _sdir + os.pathsep + os.environ.get("PATH", "")
+
+
 # REPO_HYGIENE_FILTERS is the repo-local hygiene-exclusion registry (Layer 2).
 # file_utils.discover_files reads it from this conftest, which is the right
 # home because propagation only merges the collect_ignore block above into this
@@ -42,7 +57,15 @@ if _REPO_ROOT not in sys.path:
 #       "ascii_compliance": ["human_readable-*.html"],
 #       "pyflakes_code_lint": ["devel/scratch_*.py"],
 #   }
-REPO_HYGIENE_FILTERS = {}
+REPO_HYGIENE_FILTERS = {
+	"markdown_links": [
+		"docs/archive/normalize_svg_v3_findings.md",
+		"docs/archive/svg_imagehash_similarity_3125.md",
+	],
+	"shebangs": [
+		"tools/render_svg_library_review.mjs",
+	],
+}
 
 # === OPTIONAL_HELPERS_MENU ===
 # See meta/docs/PROPAGATION_RULES.md for the managed-block propagation contract.

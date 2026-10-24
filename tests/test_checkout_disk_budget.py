@@ -11,13 +11,25 @@ MAX_CHECKOUT_SIZE_KIB = 20 * 1024 * 1024
 #============================================
 def checkout_size_kib(repo_root: str) -> int:
 	"""Return the physical checkout usage in KiB, matching ``du -sh`` scope."""
-	result = subprocess.run(
-		["du", "-sk", repo_root],
-		check=True,
-		capture_output=True,
-		text=True,
-	)
-	return int(result.stdout.split(maxsplit=1)[0])
+	import os
+	import shutil
+	du_bin = shutil.which("du")
+	if du_bin:
+		result = subprocess.run(
+			[du_bin, "-sk", repo_root],
+			check=True,
+			capture_output=True,
+			text=True,
+		)
+		return int(result.stdout.split(maxsplit=1)[0])
+	total_bytes = 0
+	for dirpath, _dirnames, filenames in os.walk(repo_root):
+		for f in filenames:
+			try:
+				total_bytes += os.path.getsize(os.path.join(dirpath, f))
+			except OSError:
+				pass
+	return total_bytes // 1024
 
 
 #============================================

@@ -191,7 +191,7 @@ export function ReportModal(props: ReportModalProps): JSXElement {
               onClick={() => props.on_close()}
               aria-label="Close Report Modal"
             >
-              ✕
+              x
             </button>
           </header>
 

@@ -136,7 +136,7 @@ export function MentorPanel(props: MentorPanelProps): JSXElement {
             onClick={() => props.on_close()}
             aria-label="Close Mentor Panel"
           >
-            ✕
+            x
           </button>
         </div>
 
@@ -227,7 +227,7 @@ export function MentorPanel(props: MentorPanelProps): JSXElement {
           </div>
           <div class="sci-input-footer">
             <span class="sci-char-count">{question().length}/500</span>
-            <span class="sci-guardrail-note">Read-only guidance • Cannot advance simulation</span>
+            <span class="sci-guardrail-note">Read-only guidance * Cannot advance simulation</span>
           </div>
         </form>
       </aside>

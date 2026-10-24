@@ -85,16 +85,16 @@ To maintain 100% compatibility with the platform's step-machine, the experiment 
 
 ```
 content/protocols/
-├── biology/ (Existing 58 scenes, 47 protocols - UNTOUCHED)
-│   ├── sdspage/
-│   ├── mtt/
-│   └── cell_culture/
-└── physics/ (New Cluster)
-    └── dc_circuits_ohms_law/
-        ├── protocol.yaml    (standard mini_protocol schema)
-        ├── circuit.yaml     (circuit network topology schema)
-        └── scenes/
-            └── electronics_bench.yaml
++-- biology/ (Existing 58 scenes, 47 protocols - UNTOUCHED)
+|   +-- sdspage/
+|   +-- mtt/
+|   +-- cell_culture/
++-- physics/ (New Cluster)
+    +-- dc_circuits_ohms_law/
+        +-- protocol.yaml    (standard mini_protocol schema)
+        +-- circuit.yaml     (circuit network topology schema)
+        +-- scenes/
+            +-- electronics_bench.yaml
 ```
 
 - **Runtime Seam**:
